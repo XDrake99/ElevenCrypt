@@ -13,9 +13,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 
-import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
-import javax.swing.JScrollBar;
 
 import org.warp.gui.ModernDialog;
 import org.warp.gui.ModernDialog.ModernExtensionFilter;

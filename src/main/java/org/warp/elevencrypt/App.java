@@ -1,5 +1,7 @@
 package org.warp.elevencrypt;
 
+import java.awt.GraphicsEnvironment;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -10,6 +12,13 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
+
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollBar;
+
+import org.warp.gui.ModernDialog;
+import org.warp.gui.ModernDialog.ModernExtensionFilter;
 
 /**
  * Hello world!
@@ -23,13 +32,7 @@ public class App
 	private static Random random = new Random();
 	private static HashMap<Long, Byte> decryptionCache = new HashMap<Long,Byte>();
 	
-    public static void main( String[] args ) throws IOException
-    {
-    	if(args.length != 4) {
-    		System.err.println("java -jar elevencrypt.jar ENCRYPT \"<INPUT_FILE>\" \"<KEY_FILE>\" \"<OUTPUT_FILE>\"");
-    		System.err.println("java -jar elevencrypt.jar DECRYPT \"<ENCRTPYED_FILE>\" \"<KEY_FILE>\" \"<OUTPUT_FILE>\"");
-    	}
-    	
+    public App(String[] args) throws IOException {
     	long time = System.currentTimeMillis();
     	
     	if (args[0].equals("DECRYPT")) {
@@ -41,9 +44,73 @@ public class App
     	}
     	
     	System.out.println("Seconds elapsed: "+(((double)(System.currentTimeMillis()-time))/1000d));
+	}
+
+	public static void main( String[] args ) throws IOException
+    {
+    	if(args.length != 4) {
+    		System.err.println("java -jar elevencrypt.jar ENCRYPT \"<INPUT_FILE>\" \"<KEY_FILE>\" \"<OUTPUT_FILE>\"");
+    		System.err.println("java -jar elevencrypt.jar DECRYPT \"<ENCRTPYED_FILE>\" \"<KEY_FILE>\" \"<OUTPUT_FILE>\"");
+    		
+    		gui();
+    	} else {
+    		new App(args);
+    	}
     }
     
-    private static void decrypt(String[] args) throws IOException {
+    private static void gui() {
+
+		if (!GraphicsEnvironment.isHeadless()) {
+			final String[] buttons = { "Encrypt", "Decrypt", "Cancel"};    
+			int returnValue = JOptionPane.showOptionDialog(null, "Choose an option:", "ElevenCrypt",
+			        JOptionPane.WARNING_MESSAGE, 0, null, buttons, buttons[2]);
+			
+			if (returnValue == 0 || returnValue == 1) {
+    			final String[] newArgs = new String[4];
+    			newArgs[0] = returnValue==0?"ENCRYPT":"DECRYPT";
+    			ModernDialog.runLater(() -> {
+    				ModernDialog fc = new ModernDialog();
+        			if (returnValue == 0) {
+            			fc.setTitle("Choose a file to encrypt...");
+        			} else {
+            			fc.setTitle("Choose a file to decrypt...");
+        			}
+        			File tmp = fc.show(null);
+        			File original;
+        			if (tmp instanceof File) {
+        				original = tmp;
+        				newArgs[1] = tmp.toString();
+        				fc = new ModernDialog();
+        				fc.setTitle("Choose a file to use as a key...");
+        				tmp = fc.show(null);
+        				if (tmp instanceof File) {
+        					newArgs[2] = tmp.toString();
+            				fc = new ModernDialog();
+            				fc.setTitle("Save the output...");
+            				fc.setExtensions(new ModernExtensionFilter(getFileExtension(original).toUpperCase()+" files",  "*."+getFileExtension(original)), new ModernExtensionFilter("All files", "*.*"));
+            				tmp = fc.showSaveDialog(null);
+            				if (tmp instanceof File) {
+            					newArgs[3] = tmp.toString();
+                				try {
+									new App(newArgs);
+								} catch (IOException e) {
+									e.printStackTrace();
+									System.exit(1);
+								}
+            				}
+        				}
+        			}
+        			
+        			gui();
+                	System.exit(0);
+    			});
+			} else {
+				System.exit(0);
+			}
+		}
+	}
+
+	private static void decrypt(String[] args) throws IOException {
     	Path fileOutput = Paths.get(args[1]);
     	Path fileKey = Paths.get(args[2]);
     	Path file = Paths.get(args[3]);
@@ -148,6 +215,15 @@ public class App
     	}
     	r.close();
     	w.close();
+	}
+	
+	private static String getFileExtension(File file) {
+	    String name = file.getName();
+	    try {
+	        return name.substring(name.lastIndexOf(".") + 1);
+	    } catch (Exception e) {
+	        return "";
+	    }
 	}
 	
 	private static byte[] reduceByteArray(byte[] bytes, int len) {
